@@ -3,6 +3,7 @@ from .views import *
 
 urlpatterns = [
     path('get-routes', home, name="Home"),
-    path('post-expense', post_expense, name="Post Expense"),
-    path('get-all-expenses', get_all_expenses, name="Get all Expenses")
+    path('expenses', post_expense, name="Post Expense"),
+    path('expenses', get_all_expenses, name="Get all Expenses"),
+    path('expenses/<int:id>', get_expense, name="Get Expense by ID")
 ]

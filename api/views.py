@@ -68,6 +68,16 @@ def get_all_expenses(request):
         'data': serializer.data
     })
 
+@api_view(['GET'])
+def get_expense(request, id):
+    expense = Expense.objects.get(id=id)
+    serializer = ExpenseSerializer(expense)
+    return Response({
+        'status': True,
+        'message': 'Expense Fetched',
+        'data': serializer.data
+    })
+
 @api_view(['POST'])
 def post_expense(request):
     try:
