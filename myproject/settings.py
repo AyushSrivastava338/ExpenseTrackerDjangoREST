@@ -25,8 +25,7 @@ SECRET_KEY = 'django-insecure-!cmkao%82ihy&k5vt$9*2-(e(zihj_xt-jpm$eg9+nn!7o^_hc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -38,10 +37,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'api',
+    'rest_framework.authtoken',
+    'corsheaders',
+    'api'
 ]
 
+AUTH_USER_MODEL = 'api.CustomUser'
+
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",  # new
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,11 +81,14 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db1.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'ttcsxisn',
+        'USER': 'ttcsxisn',
+        'PASSWORD': 'GurSQN7FiqycODiwLwnEP7vmYrBdo2oi',
+        'HOST': 'trumpet.db.elephantsql.com',
+        'PORT': '5432'
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -107,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -123,3 +130,24 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+# Configure JWT settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=30),
+    'SLIDING_TOKEN_REFRESH_LIFETIME_IN_SECONDS': 86400,  # 1 day in seconds
+    'SLIDING_TOKEN_LIFETIME_IN_SECONDS': 2592000,  # 30 days in seconds
+}

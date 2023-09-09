@@ -1,13 +1,25 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .serializer import ExpenseSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from datetime import date, timedelta
+from django.db.models import Sum
+from .serializer import ExpenseSerializer, UserSerializer
 from .models import Expense
-from django.utils.dateparse import parse_datetime
 
-# Create your views here.
+@api_view(['POST'])
+def register(request):
+    serializer = UserSerializer(data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(status=status.HTTP_201_CREATED)
+
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
-def getRoutes():
+def getRoutes(request):
     routes = [
         {
             'Endpoint': '/api/endpoints',
@@ -43,10 +55,13 @@ def getRoutes():
             'description': 'Deletes the user expense with given id'
         }
     ]
+    return Response(routes)
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def home(request):
     if request.method == 'GET':
+        print(request.user)
         return Response({
             'status': 200,
             'message': 'GET METHOD CALLED'
@@ -58,49 +73,72 @@ def home(request):
         })
 
 
-@api_view(['GET'])
-def get_all_expenses(request):
-    all_expenses = Expense.objects.all()
-    serializer = ExpenseSerializer(all_expenses, many=True)
-    return Response({
-        'status': True,
-        'message': 'Expenses fetched',
-        'data': serializer.data
-    })
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def expenses(request):
+    if request.method == 'GET':
+        all_expenses = Expense.objects.filter(user=str(request.user)).all()
+        serializer = ExpenseSerializer(all_expenses, many=True)
+        return Response(
+            serializer.data
+        )
+    elif request.method == 'POST':
+        try:
+            data = request.data
+            data['user'] = str(request.user)
+            serializer = ExpenseSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
 
-@api_view(['GET'])
-def get_expense(request, id):
-    expense = Expense.objects.get(id=id)
-    serializer = ExpenseSerializer(expense)
-    return Response({
-        'status': True,
-        'message': 'Expense Fetched',
-        'data': serializer.data
-    })
+                all_expenses = Expense.objects.filter(user=str(request.user)).all()
+                all_serializer = ExpenseSerializer(all_expenses, many=True)
+                return Response({
+                    'status': True,
+                    'message': 'Success',
+                    'data': all_serializer.data
+                })
 
-@api_view(['POST'])
-def post_expense(request):
-    try:
-        data = request.data
-
-        serializer = ExpenseSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
+            print(serializer.data)
             return Response({
-                'status': True,
-                'message': 'Success',
-                'data': serializer.data
+                'status': False,
+                'message': 'Failure',
+                'data': serializer.errors
             })
 
-        print(serializer.data)
+        except Exception as e:
+            print(e)
         return Response({
             'status': False,
-            'message': 'Success',
-            'data': serializer.errors
         })
 
-    except Exception as e:
-        print(e)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_expense(request, id):
+    expense = Expense.objects.filter(user=str(request.user), id=id).delete()
+    # serializer = ExpenseSerializer(expense)
     return Response({
-        'status': False,
+        'status': True,
+        'message': 'Expense Deleted'
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def sum_of_last_7_days(request):
+    sums_last_7_days = []
+
+    # Calculate sums for each of the last 7 days
+    for i in range(7):
+        start_date = date.today() - timedelta(days=i)
+        end_date = start_date + timedelta(1)
+
+        total_expenses = Expense.objects.filter(
+            user=request.user,
+            timestamp__gte=start_date,
+            timestamp__lt=end_date
+        ).aggregate(Sum('amount'))['amount__sum'] or 0  # Default to 0 if there are no expenses
+
+        sums_last_7_days.append(total_expenses)
+
+    return Response({'expenses_last_7_days': sums_last_7_days})
+
